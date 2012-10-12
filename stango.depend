@@ -1,0 +1,67 @@
+# depslib dependency file v1.0
+1348959429 source:/home/stas/codeblocks/stango/chess_game.c
+	"common.h"
+	"chess_game.h"
+
+1349803779 /home/stas/codeblocks/stango/common.h
+	<unistd.h>
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+	<time.h>
+	<signal.h>
+	<stdio.h>
+	<stdlib.h>
+	<math.h>
+	"messaging.h"
+	"hash.h"
+	"chess_game.h"
+	"magic.h"
+	"evaluator.h"
+	"move_generator.h"
+	"commands.h"
+
+1347129833 /home/stas/codeblocks/stango/messaging.h
+	"common.h"
+
+1349803419 /home/stas/codeblocks/stango/hash.h
+	"common.h"
+
+1348862391 /home/stas/codeblocks/stango/chess_game.h
+	"common.h"
+
+1347610887 /home/stas/codeblocks/stango/magic.h
+	"common.h"
+	"chess_game.h"
+
+1348920957 /home/stas/codeblocks/stango/evaluator.h
+	"common.h"
+
+1349198509 /home/stas/codeblocks/stango/move_generator.h
+	"common.h"
+
+1349477979 /home/stas/codeblocks/stango/commands.h
+
+1349477954 source:/home/stas/codeblocks/stango/commands.c
+
+1348870376 source:/home/stas/codeblocks/stango/common.c
+	"common.h"
+
+1349806493 source:/home/stas/codeblocks/stango/evaluator.c
+	"evaluator.h"
+
+1349803406 source:/home/stas/codeblocks/stango/hash.c
+	"hash.h"
+
+1348860335 source:/home/stas/codeblocks/stango/magic.c
+	"magic.h"
+
+1349199413 source:/home/stas/codeblocks/stango/main.c
+	"common.h"
+
+1347040979 source:/home/stas/codeblocks/stango/messaging.c
+	"messaging.h"
+
+1349806335 source:/home/stas/codeblocks/stango/move_generator.c
+	"move_generator.h"
+

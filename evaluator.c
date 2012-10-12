@@ -140,6 +140,7 @@ int evaluate_position() {
 	U64 tmp;
 	U64 pawns;
 	bool isEndgame=false;
+	int r = rand()&15;
 	
 	b+=popCount(bcurrent->brook)*500;
 	b+=popCount(bcurrent->bqueen)*900;
@@ -153,7 +154,7 @@ int evaluate_position() {
 	b+=popCount(bcurrent->bbishop)*330;
 	b+=popCount(bcurrent->bking)*40000;
 	
-	b+=( (bcurrent->cas&CAS_BK) + (bcurrent->cas&CAS_BQ) )*10;
+	//b+=( (bcurrent->cas&CAS_BK) + (bcurrent->cas&CAS_BQ) )*10;
 	
 	b+=positionToScore(BPawnPSQ, bcurrent->bpawn);
 	b+=positionToScore(BRookPSQ, bcurrent->brook);
@@ -161,23 +162,13 @@ int evaluate_position() {
 	b+=positionToScore(BKnightPSQ, bcurrent->bknight);
 	b+=positionToScore(BQueenPSQ, bcurrent->bqueen);
 	
-	if (isEndgame) {
-		b+=positionToScore(BKingEndPSQ, bcurrent->bking);
-	} else {
-		b+=positionToScore(BKingPSQ, bcurrent->bking);
-	}
-	
-/*	
-	if (bcurrent->bking&0x4400000000000000ULL) b+=50;
-	b+=popCount(bcurrent->all_black_attacks)*3;
-*/	
 	
 	w+=popCount(bcurrent->bPawn)*100;
 	w+=popCount(bcurrent->bKnight)*320;
 	w+=popCount(bcurrent->bBishop)*330;
 	w+=popCount(bcurrent->bKing)*40000;
 	
-	w+=( (bcurrent->cas&CAS_WK) + (bcurrent->cas&CAS_WQ) )*10;
+//	w+=( (bcurrent->cas&CAS_WK) + (bcurrent->cas&CAS_WQ) )*10;
 	
 	
 	w+=positionToScore(WPawnPSQ, bcurrent->bPawn);
@@ -186,16 +177,8 @@ int evaluate_position() {
 	w+=positionToScore(WKnightPSQ, bcurrent->bKnight);
 	w+=positionToScore(WQueenPSQ, bcurrent->bQueen);
 	
-	if (isEndgame) {
-		w+=positionToScore(WKingEndPSQ, bcurrent->bking);
-	} else {
-		w+=positionToScore(WKingPSQ, bcurrent->bking);
-	}
 	
-/*	
-	if (bcurrent->bKing&0x44ULL) w+=50;
-	w+=popCount(bcurrent->all_white_attacks)*3;
-	*/
+	
 	
 	tmp=leftBorder;
 	// penalty for doubled pawns
@@ -213,6 +196,16 @@ int evaluate_position() {
 	}
 	
 	
+	if (isEndgame) {
+		b+=positionToScore(BKingEndPSQ, bcurrent->bking);
+	} else {
+		b+=positionToScore(BKingPSQ, bcurrent->bking);
+	}
+	if (isEndgame) {
+		w+=positionToScore(WKingEndPSQ, bcurrent->bking);
+	} else {
+		w+=positionToScore(WKingPSQ, bcurrent->bking);
+	}
 	
-	return w-b;
+	return w-b+r-7;
 }

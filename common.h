@@ -35,6 +35,7 @@ typedef unsigned long long U64;
 #define BLACK 1
 
 #define INF 10000000
+#define MAX_PLY 100
 
 
 extern int piece_value[];
@@ -83,6 +84,7 @@ enum file_t {
 
 // for now chess state and chess move is the same thing
 struct chess_state {
+	U64 key; // computed hash key
 	/* dynamic part, to recover the old state */
 	enum pos_t from;
 	enum pos_t to;

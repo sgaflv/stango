@@ -19,7 +19,6 @@ U64 *get_bitboard(struct chess_state *state, enum piece_t piece) {
 	return t+piece;
 }
 
-
 enum piece_t get_bpiece(struct chess_state *state, U64 *bitboard) {
 	if (&state->benpas == bitboard) return enpas;
 	
@@ -38,10 +37,6 @@ enum piece_t get_bpiece(struct chess_state *state, U64 *bitboard) {
 	if (&state->bknight == bitboard) return knight;
 	
 	return empty;
-	
-	/*U64 *t=&state->all_white;
-	return bitboard - t;
-	*/
 }
 
 enum piece_t get_bto_piece(struct chess_state *state, U64 bto) {
@@ -69,10 +64,6 @@ enum piece_t get_bto_piece(struct chess_state *state, U64 bto) {
 
 	
 	return empty;
-	
-	/*U64 *t=&state->all_white;
-	return bitboard - t;
-	*/
 }
 
 
@@ -818,219 +809,95 @@ int test_all_moves()
 
 
 
-
-
-
-int alphaBetaMax( int alpha, int beta, int depth, bool first ) {
-	int mcnt, i, score=-INF;
-	int oldalpha=alpha;
-	int oldbeta=beta;
-	struct chess_state moves[255];
-	
-	struct chess_state *tmp;
-	int next_depth;
-	int mv;
-	int rnd = random();
-	U64 hnum=0;
+int search(int alpha, int beta, int depth, int lply) {
+	int score=-INF;
+	int oldAlpha = alpha;
 	struct hash_t *h;
+	int i;
+	U64 key;
 	
+	struct chess_state moves[255];
+	int mcnt;
+	struct chess_state *tmp=bcurrent;
 	
+	if (depth==0 || game_setup.forced) 
+		if (WTM) return evaluate_position();
+		else return -evaluate_position();
 	
-	if (depth == 0 || game_setup.forced ) return evaluate_position();
-	
-	h = &hash[0];
-	
-	hnum = compute_hash(bcurrent);
-	h = &hash[HASH(hnum)];
-	
-	if (!first&&h->key==hnum&&h->depth>=depth) {
-		transpositions++;
-//		if (h->score<beta) beta=h->score;
-//		if (alpha>=beta) return beta;
-	}
-
-	mcnt = generate_moves(moves);
-	
-	if (mcnt==0) {
-		if ((bcurrent->bKing&bcurrent->all_black_attacks)!=0) return -50000-depth;
-		if ((bcurrent->bking&bcurrent->all_white_attacks)!=0) return 50000+depth;
-		return 0;
+	key=compute_hash(bcurrent);
+	if (ply>=8&&lply>0) {
+		if (history[ply-4].key==key&&history[ply-8].key==key)
+			return 0;
 	}
 	
-	{
-//		unsigned char movemap[mcnt];
-//		memcpy(movemap, MP0_254, sizeof mcnt);
-//		qsort(movemap, mcnt, sizeof (char), compareDec);
-		
-		
-		for (i=0;i<mcnt;i++) {
+	h = &hash[HASH(key)];
+	if (h->flag!=s_empty && h->key==key) {
+		if (lply>0 && h->depth >= depth) {
+			score=h->score;
+			if (score > INF-MAX_PLY) score-=lply;
+			if (score < -INF+MAX_PLY) score+=lply;
+			switch (h->flag) {
+				s_PV:
+				s_beta:
+					if (score>alpha) alpha=score;
+					if (alpha >= beta) return beta;
+					break;
+				s_alpha:
+					if (score<=alpha) return alpha;
+					break;
 			
-	/*		if (first) {
-				sprintf(outbuf, "# thinking %d of %d\n", i+1, mcnt);
-				send_message(outbuf);
-			}*/
-			
-			mv=(rnd+i)%mcnt;
-		
-			tmp = bcurrent;
-			bcurrent = &moves[mv];
-			ply++;
-			next_depth=depth - 1;
-			
-			if (moves[mv].is_capture) {
-				if (depth<2) {
-					if (moves[mv].to==last_capture_square) {
-						next_depth++;
-					} else if (WTM&&!first) {
-						/* avoid unforced capture at the event horizon */
-						bcurrent = tmp;
-						ply--;
-						continue;
-					}
+			}
+			if (h->flag!=alpha) {
+				
+				bcurrent=&h->move;
+				ply++;
+				score = -search(-beta,-alpha,depth-1,lply+1);
+				ply--;
+				bcurrent=tmp;
+				
+				if (score>alpha) {
+					record_hash(depth, score, score<beta?s_PV:s_beta, key, &h->move, lply);
+					alpha=score;
+					if(alpha>=beta) return beta;
 				}
 				
-				last_capture_square=moves[mv].to;
 			}
-			
-			if (!bcurrent->bKing||!bcurrent->bking) next_depth=0;
-			
-			score = alphaBetaMin( alpha, beta, next_depth, false ) ;
-			
-			bcurrent = tmp;
-			ply--;
-			
-			if (score<=alpha) continue;
-			
-			alpha = score;
-			if (first) {
-				if (score<=-50000||score>=50000) {
-					sprintf(outbuf, "# mating %d ", score);
-					send_message(outbuf);
-					send_move(moves[mv].from, moves[mv].to, moves[mv].promo);
-				}
-				memcpy(&history[ply+1], &moves[mv], sizeof (struct chess_state));
-				best_move_found = &history[ply+1];
-			}
-			
-			if (alpha<beta) continue;
-			return alpha;
 		}
 	}
 	
-	score--;
-	
-	h->key=hnum;
-	h->depth=depth;
-	h->score=alpha;
-	return alpha;
-}
-
-int alphaBetaMin( int alpha, int beta, int depth, bool first ) {
-	int mcnt, i, score=INF;
-	int oldalpha=alpha;
-	int oldbeta=beta;
-	struct chess_state moves[255];
-	struct chess_state *tmp;
-	int next_depth;
-	int mv;
-	int rnd=random();
-	U64 hnum;
-	struct hash_t *h;
-	
-	nodes_checked++;
-	
-	if (depth==0 || game_setup.forced) return evaluate_position();
-
-//	hnum=0;
-//	h = &hash[0];
-
-	
-	hnum = compute_hash(bcurrent);
-	h = &hash[HASH(hnum)];
-	
-	if (!first&&h->key==hnum&&h->depth>=depth) {
-		transpositions++;
-//		if (h->score>alpha) alpha=h->score;
-//		if (alpha>=beta) return alpha;
-	}
-
-
-
 	mcnt = generate_moves(moves);
 	
-	
 	if (mcnt==0) {
-		if ((bcurrent->bKing&bcurrent->all_black_attacks)!=0) return -50000-depth;
-		if ((bcurrent->bking&bcurrent->all_white_attacks)!=0) return 50000+depth;
+		if ((bcurrent->bKing&bcurrent->all_black_attacks)!=0) return -INF+MAX_PLY+lply;
+		if ((bcurrent->bking&bcurrent->all_white_attacks)!=0) return -INF+MAX_PLY+lply;
 		return 0;
 	}
 	
 	for (i=0;i<mcnt;i++) {
-		
-/*		if (first) {
-			sprintf(outbuf, "# thinking %d of %d\n", i+1, mcnt);
-			send_message(outbuf);
-		}
-		*/
-		
-		mv=(rnd+i)%mcnt;
-		
 		tmp = bcurrent;
-		bcurrent = &moves[mv];
+		bcurrent = &moves[i];
 		ply++;
-		next_depth=depth - 1;
-		
-		if (moves[mv].is_capture) {
-			if (depth<2) {
-				if (moves[mv].to==last_capture_square) {
-					next_depth++;
-				} else if (!WTM&&!first) {
-					/* avoid unforced capture at the event horizon */
-					bcurrent = tmp;
-					//undo move
-					ply--;
-					continue;
-				}
-			}
-			last_capture_square=moves[mv].to;
-		}
-			
-		if (!bcurrent->bKing||!bcurrent->bking) next_depth=0;
-		
-		
-		score = alphaBetaMax( alpha, beta, next_depth, false ) ;
-		
-		bcurrent = tmp;
+		score=-search(-beta,-alpha,depth-1,lply+1);
 		ply--;
+		bcurrent=tmp;
 		
-		
-		if (score>=beta) continue;
+		if (score>alpha) {
+			record_hash(depth,score,score<beta?s_PV:s_beta,key,&moves[i],lply);
+			alpha=score;
 			
-		beta = score;
-		
-		if (first) {
-			if (score<=-50000||score>=50000) {
-				sprintf(outbuf, "# mating %d ", score);
-				send_message(outbuf);
-				send_move(moves[mv].from, moves[mv].to, moves[mv].promo);
+			if (lply==0) {
+				memcpy(&history[ply+1], &moves[i], sizeof (struct chess_state));
+				best_move_found = &history[ply+1];
 			}
-				
-			memcpy(&history[ply+1], &moves[mv], sizeof (struct chess_state));
-			best_move_found = &history[ply+1];
+			
+			if (alpha>=beta) return beta;
 		}
-		
-		if (alpha<beta) continue;
-		
-		return beta; // fail hard alpha-cutoff
 	}
 	
-	score++;
+	if (alpha==oldAlpha)
+		record_hash(depth,score,s_alpha,key,&moves[i],lply);
 	
-	h->key=hnum;
-	h->depth=depth;
-	h->score=beta;
-	
-	return beta;
+	return alpha;
 }
 
 #define TIME 1.5
@@ -1038,6 +905,7 @@ int alphaBetaMin( int alpha, int beta, int depth, bool first ) {
 void make_smart_move() {
 	enum pos_t from=A1;
 	enum pos_t to=A1;
+	int depth = 6;
 	int estimation;
 	clock_t start, finish;
 	
@@ -1051,52 +919,32 @@ void make_smart_move() {
 	bcurrent=&history[ply];
 	
 	start = clock();
-	if (WTM) {
-		int depth = 6;
-		finish = clock();
+	
+	
+	finish = clock();
+	
+	while ((double)(finish-start)/CLOCKS_PER_SEC<TIME) {
+		sprintf(outbuf, "# depth=%d\n", depth);
+		send_message(outbuf);
+		nodes_checked=0;
+		transpositions=0;
 		
-		while ((double)(finish-start)/CLOCKS_PER_SEC<TIME) {
-			sprintf(outbuf, "# white depth=%d\n", depth);
-			send_message(outbuf);
-			nodes_checked=0;
-			transpositions=0;
-			
-			
-			estimation=alphaBetaMax(-INF, INF, depth, true);
-			if (best_move_found) {
-				from = best_move_found->from;
-				to = best_move_found->to;
-			} else {
-				break;
-			}
-			
-			depth++;
-			finish = clock();
-		}
+		if (WTM)
+			estimation=search(-INF,INF,depth,0);
+		else
+			estimation=-search(-INF,INF,depth,0);
 		
-	} else {
-		int depth=12;
-		finish = clock();
-		
-		while ((double)(finish-start)/CLOCKS_PER_SEC<TIME) 
-		{
-			sprintf(outbuf, "# black depth=%d\n", depth);
-			send_message(outbuf);
-			nodes_checked=0;
-			transpositions=0;
-			
-			estimation=alphaBetaMin(-INF, INF, depth, true);
-			if (best_move_found) {
-				from = best_move_found->from;
-				to = best_move_found->to;
-			} else {
-				break;
-			}
-			depth++;
-			finish = clock();
+		if (best_move_found) {
+			from = best_move_found->from;
+			to = best_move_found->to;
+		} else {
 			break;
 		}
+		
+		depth++;
+		finish = clock();
 	}
+	
 	
 	finish = clock();
 	
@@ -1125,7 +973,7 @@ void make_smart_move() {
 	bcurrent = &history[ply];
 	
 	print_game(bcurrent);
-
+	
 	//accept(from, to, promote, true);
 	
 	double time = (double)(finish-start)/CLOCKS_PER_SEC;
@@ -1168,7 +1016,7 @@ void test_thinking() {
 			"r1bqk2r/pp2bppp/2p5/3pP3/P2Q1P2/2N1B3/1PP3PP/R4RK1 b kq ",
 			"r2qnrnk/p2b2b1/1p1p2pp/2pPpp2/1PP1P3/PRNBB3/3QNPPP/5RK1 w "
 		};
-		
+	
 	char *bm[] = 
 		{
 			"Qd1+", "d5", "f5", "e6", "Nd5", "g6", "Nf6", "f5", "f5", "Ne5", 
